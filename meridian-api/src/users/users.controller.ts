@@ -28,8 +28,11 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AccessTokenGuard } from 'src/auth/guard/access-token/access-token.guard';
+import { RolesGuard } from 'src/auth/guard/roles/roles.guard';
+import { Roles } from 'src/auth/decorators/roles/roles.decorator';
 import { Auth } from 'src/auth/decorators/auth/auth.decorator';
 import { AuthType } from 'src/auth/enums/auth-type.enum';
+import { UserRole } from './user.entity';
 import { CreateManyUsersDto } from './dto/create-many-users.dto';
 
 @Controller('users')
@@ -93,6 +96,9 @@ export class UsersController {
   }
 
   @Post('/many-users')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.Admin)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create multiple users' })
   @ApiResponse({ status: 201, description: 'Users created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -101,6 +107,9 @@ export class UsersController {
   }
 
   @Delete('/:id')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.Admin)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft-delete a user by ID (issue #427)' })
   @ApiResponse({ status: 200, description: 'User soft-deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -109,6 +118,9 @@ export class UsersController {
   }
 
   @Post('/:id/restore')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.Admin)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Restore a soft-deleted user by ID' })
   @ApiResponse({ status: 200, description: 'User restored successfully' })
   @ApiResponse({
@@ -120,6 +132,9 @@ export class UsersController {
   }
 
   @Patch()
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.Admin, UserRole.Moderator)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user details' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })

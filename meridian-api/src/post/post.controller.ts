@@ -10,13 +10,18 @@ import {
   Post,
   Query,
   ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { PostsService } from './provider/post.service';
 import { GetPostsParamDto } from './dto/post-param.dto';
 import { CreatePostDto } from './dto/create-post.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PatchPostDto } from './dto/patch-post.dto';
 import { GetPostsDto } from './dto/get-posts.dto';
+import { AccessTokenGuard } from 'src/auth/guard/access-token/access-token.guard';
+import { RolesGuard } from 'src/auth/guard/roles/roles.guard';
+import { Roles } from 'src/auth/decorators/roles/roles.decorator';
+import { UserRole } from 'src/users/user.entity';
 
 @ApiTags('Posts')
 @Controller('posts')
@@ -43,6 +48,9 @@ export class PostController {
   }
 
   @Delete()
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.Admin, UserRole.Moderator)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft-delete a post (issue #427)' })
   @ApiResponse({ status: 200, description: 'Post soft-deleted successfully' })
   public deleteOne(@Query('id', ParseIntPipe) id: number) {
@@ -50,6 +58,9 @@ export class PostController {
   }
 
   @Post('/:id/restore')
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.Admin, UserRole.Moderator)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Restore a soft-deleted post by ID' })
   @ApiResponse({ status: 200, description: 'Post restored successfully' })
   @ApiResponse({
@@ -61,6 +72,9 @@ export class PostController {
   }
 
   @Patch()
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.Admin, UserRole.Moderator)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update an existing post' })
   @ApiResponse({ status: 200, description: 'Post updated successfully' })
   @ApiResponse({ status: 400, description: 'Bad request / Validation failure' })

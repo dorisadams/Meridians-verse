@@ -12,6 +12,7 @@ import { GenerateTokenProvider } from './providers/token.provider';
 import { RefreshTokenProvider } from './providers/refreshToken.provider';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { RolesGuard } from './guard/roles/roles.guard';
 
 @Module({
   imports: [
@@ -26,8 +27,9 @@ import { RefreshToken } from './entities/refresh-token.entity';
     RefreshTokenProvider,
     { provide: HashingProvider, useClass: BcryptProvider },
     SignInProviders,
+    RolesGuard,
   ],
   controllers: [AuthController],
-  exports: [AuthService, HashingProvider],
+  exports: [AuthService, HashingProvider, RolesGuard],
 })
 export class AuthModule {}

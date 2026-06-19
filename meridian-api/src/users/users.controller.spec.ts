@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import * as request from 'supertest';
 
 // Mocks for aliased paths that Jest cannot resolve.
@@ -7,7 +8,10 @@ jest.mock('src/DTO/create-user.dto', () => ({}), { virtual: true });
 jest.mock('src/DTO/userparamdto', () => ({}), { virtual: true });
 jest.mock('src/DTO/patch-user.dto', () => ({}), { virtual: true });
 jest.mock('./dtos/createManyUserdto', () => ({}), { virtual: true });
-jest.mock('./user.entity', () => ({ User: class User {} }));
+jest.mock('./user.entity', () => ({
+  User: class User {},
+  UserRole: { Admin: 'admin', User: 'user', Moderator: 'moderator' },
+}));
 jest.mock(
   '../auth/providers/user-auth.facade',
   () => ({ UserAuthFacade: class UserAuthFacade {} }),
@@ -18,14 +22,11 @@ jest.mock(
   () => ({ HashingProvider: class HashingProvider {} }),
   { virtual: true },
 );
-jest.mock(
-  'src/mail/providers/mail.provider',
-  () => ({ MailProvider: class MailProvider {} }),
-  { virtual: true },
-);
 
 import { UsersController } from './users.controller';
 import { UserService } from './providers/user.services';
+import { UserRole } from './user.entity';
+import { ROLES_KEY } from 'src/auth/decorators/roles/roles.decorator';
 
 describe('UsersController (integration)', () => {
   let app: INestApplication;
@@ -211,5 +212,53 @@ describe('UsersController (integration)', () => {
     await request(app.getHttpServer())
       .get('/users/find/not-a-number')
       .expect(400);
+  });
+
+  // ── RBAC metadata checks ──────────────────────────────────────────
+  describe('RBAC role metadata', () => {
+    let reflector: Reflector;
+
+    beforeEach(() => {
+      reflector = new Reflector();
+    });
+
+    it('DELETE /:id requires Admin role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, UsersController.prototype.deleteUsers);
+      expect(roles).toBeDefined();
+      expect(roles).toContain(UserRole.Admin);
+      expect(roles).toHaveLength(1);
+    });
+
+    it('POST /:id/restore requires Admin role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, UsersController.prototype.restoreUser);
+      expect(roles).toBeDefined();
+      expect(roles).toContain(UserRole.Admin);
+      expect(roles).toHaveLength(1);
+    });
+
+    it('POST /many-users requires Admin role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, UsersController.prototype.createMany);
+      expect(roles).toBeDefined();
+      expect(roles).toContain(UserRole.Admin);
+      expect(roles).toHaveLength(1);
+    });
+
+    it('PATCH requires Admin or Moderator role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, UsersController.prototype.editedPost);
+      expect(roles).toBeDefined();
+      expect(roles).toContain(UserRole.Admin);
+      expect(roles).toContain(UserRole.Moderator);
+      expect(roles).toHaveLength(2);
+    });
+
+    it('GET /:id does not require any role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, UsersController.prototype.getUsers);
+      expect(roles).toBeUndefined();
+    });
+
+    it('POST /users does not require any role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, UsersController.prototype.createUsers);
+      expect(roles).toBeUndefined();
+    });
   });
 });

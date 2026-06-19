@@ -1,9 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import * as request from 'supertest';
 
 jest.mock('../post/post.entity', () => ({ Post: class Post {} }));
-jest.mock('src/users/user.entity', () => ({ User: class User {} }), {
+jest.mock('src/users/user.entity', () => ({
+  User: class User {},
+  UserRole: { Admin: 'admin', User: 'user', Moderator: 'moderator' },
+}), {
   virtual: true,
 });
 jest.mock('src/tag/tag.entity', () => ({ Tag: class Tag {} }), {
@@ -75,12 +79,11 @@ jest.mock('src/DTO/postparamdto', () => ({}), { virtual: true });
 jest.mock('src/DTO/create-post.dto', () => ({}), { virtual: true });
 jest.mock('src/DTO/patch-post.dto', () => ({}), { virtual: true });
 jest.mock('src/DTO/getPostdto', () => ({}), { virtual: true });
-jest.mock('src/common/pagination/dto/pagination-query.dto', () => ({}), {
-  virtual: true,
-});
 
 import { PostController } from './post.controller';
 import { PostsService } from './provider/post.service';
+import { UserRole } from 'src/users/user.entity';
+import { ROLES_KEY } from 'src/auth/decorators/roles/roles.decorator';
 
 describe('PostController (integration)', () => {
   let app: INestApplication;
@@ -176,5 +179,48 @@ describe('PostController (integration)', () => {
     expect(postsService.UpdatePost).toHaveBeenCalledWith(
       expect.objectContaining(dto),
     );
+  });
+
+  // ── RBAC metadata checks ──────────────────────────────────────────
+  describe('RBAC role metadata', () => {
+    let reflector: Reflector;
+
+    beforeEach(() => {
+      reflector = new Reflector();
+    });
+
+    it('DELETE requires Admin or Moderator role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, PostController.prototype.deleteOne);
+      expect(roles).toBeDefined();
+      expect(roles).toContain(UserRole.Admin);
+      expect(roles).toContain(UserRole.Moderator);
+      expect(roles).toHaveLength(2);
+    });
+
+    it('POST /:id/restore requires Admin or Moderator role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, PostController.prototype.restorePost);
+      expect(roles).toBeDefined();
+      expect(roles).toContain(UserRole.Admin);
+      expect(roles).toContain(UserRole.Moderator);
+      expect(roles).toHaveLength(2);
+    });
+
+    it('PATCH requires Admin or Moderator role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, PostController.prototype.updatePostTag);
+      expect(roles).toBeDefined();
+      expect(roles).toContain(UserRole.Admin);
+      expect(roles).toContain(UserRole.Moderator);
+      expect(roles).toHaveLength(2);
+    });
+
+    it('GET /posts does not require any role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, PostController.prototype.getPosts);
+      expect(roles).toBeUndefined();
+    });
+
+    it('POST /posts does not require any role', () => {
+      const roles = reflector.get<UserRole[]>(ROLES_KEY, PostController.prototype.Createpost);
+      expect(roles).toBeUndefined();
+    });
   });
 });

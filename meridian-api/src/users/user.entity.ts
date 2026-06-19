@@ -6,10 +6,14 @@ import {
   Column,
   PrimaryGeneratedColumn,
   OneToMany,
-  OneToOne,
-  JoinColumn,
   DeleteDateColumn,
 } from 'typeorm';
+
+export enum UserRole {
+  Admin = 'admin',
+  User = 'user',
+  Moderator = 'moderator',
+}
 
 @Entity()
 export class User {
@@ -40,6 +44,9 @@ export class User {
   // but can be restored via POST /users/:id/restore
   @DeleteDateColumn()
   deletedAt?: Date;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.User })
+  role: UserRole;
 
   // @Column({ default: true })
   // isActive: boolean;

@@ -11,10 +11,33 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   // Apply baseline security headers (Closes #448).
-  // CSP is disabled to avoid breaking the @nestjs/swagger UI at /api,
-  // which requires inline scripts/styles. Other helmet defaults (HSTS,
-  // X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc.) remain on.
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // CSP directives are relaxed for the @nestjs/swagger UI at /api which requires
+  // inline scripts/styles and CDN resources. All other helmet defaults (HSTS,
+  // X-Frame-Options, X-Content-Type-Options, Referrer-Policy, X-DNS-Prefetch-Control,
+  // Cross-Origin policies, X-XSS-Protection, etc.) remain active.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://cdn.jsdelivr.net",
+          ],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.googleapis.com",
+          ],
+          imgSrc: ["'self'", "data:", "https://validator.swagger.io"],
+          fontSrc: ["'self'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+          connectSrc: ["'self'"],
+        },
+      },
+    }),
+  );
 
   // CORS Configuration
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
