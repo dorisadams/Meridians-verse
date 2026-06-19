@@ -18,6 +18,26 @@ jest.mock(
   { virtual: true },
 );
 jest.mock(
+  'src/auth/guard/access-token/access-token.guard',
+  () => ({ AccessTokenGuard: class AccessTokenGuard {} }),
+  { virtual: true },
+);
+jest.mock(
+  'src/auth/guard/roles/roles.guard',
+  () => ({ RolesGuard: class RolesGuard {} }),
+  { virtual: true },
+);
+jest.mock(
+  'src/auth/decorators/roles/roles.decorator',
+  () => {
+    const { SetMetadata } = require('@nestjs/common');
+    const ROLES_KEY = 'roles';
+    const Roles = (...roles: any[]) => SetMetadata(ROLES_KEY, roles);
+    return { Roles, ROLES_KEY };
+  },
+  { virtual: true },
+);
+jest.mock(
   'src/auth/providers/hashing',
   () => ({ HashingProvider: class HashingProvider {} }),
   { virtual: true },
@@ -156,11 +176,13 @@ describe('UsersController (integration)', () => {
     expect(userService.createMany).toHaveBeenCalledWith(dto);
   });
 
-  it('DELETE /users responds with status 200', async () => {
+  it('DELETE /users/:id soft-deletes the user', async () => {
+    userService.deleteUser.mockResolvedValue({ deleted: true, id: 1 });
     const response = await request(app.getHttpServer())
-      .delete('/users')
+      .delete('/users/1')
       .expect(200);
-    expect(response).toBeDefined();
+    expect(response.body).toEqual({ deleted: true, id: 1 });
+    expect(userService.deleteUser).toHaveBeenCalledWith(1);
   });
 
   it('PATCH /users updates user details', async () => {

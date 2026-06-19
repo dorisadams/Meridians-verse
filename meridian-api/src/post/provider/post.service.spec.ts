@@ -50,7 +50,8 @@ describe('PostsService', () => {
   let service: PostsService;
   let postRepository: {
     find: jest.Mock;
-    delete: jest.Mock;
+    softDelete: jest.Mock;
+    restore: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
     findOneBy: jest.Mock;
@@ -75,7 +76,8 @@ describe('PostsService', () => {
   beforeEach(() => {
     postRepository = {
       find: jest.fn(),
-      delete: jest.fn(),
+      softDelete: jest.fn(),
+      restore: jest.fn(),
       create: jest.fn((dto) => ({ id: 10, ...dto })),
       save: jest.fn(async (post) => post),
       findOneBy: jest.fn(),
@@ -114,11 +116,25 @@ describe('PostsService', () => {
   });
 
   describe('deleteOne', () => {
-    it('deletes a post by id and returns the deletion summary', async () => {
-      postRepository.delete.mockResolvedValue({ affected: 1 });
+    it('soft-deletes a post by id and returns the deletion summary', async () => {
+      postRepository.softDelete.mockResolvedValue({ affected: 1 });
       const result = await service.deleteOne(10);
-      expect(postRepository.delete).toHaveBeenCalledWith(10);
+      expect(postRepository.softDelete).toHaveBeenCalledWith(10);
       expect(result).toEqual({ deleted: true, id: 10 });
+    });
+  });
+
+  describe('restorePost', () => {
+    it('restores a soft-deleted post and returns the restoration summary', async () => {
+      postRepository.restore.mockResolvedValue({ affected: 1 });
+      const result = await service.restorePost(10);
+      expect(postRepository.restore).toHaveBeenCalledWith(10);
+      expect(result).toEqual({ restored: true, id: 10 });
+    });
+
+    it('throws HttpException when the post was not found or is not soft-deleted', async () => {
+      postRepository.restore.mockResolvedValue({ affected: 0 });
+      await expect(service.restorePost(404)).rejects.toThrow();
     });
   });
 

@@ -71,6 +71,26 @@ jest.mock(
   { virtual: true },
 );
 jest.mock(
+  'src/auth/guard/access-token/access-token.guard',
+  () => ({ AccessTokenGuard: class AccessTokenGuard {} }),
+  { virtual: true },
+);
+jest.mock(
+  'src/auth/guard/roles/roles.guard',
+  () => ({ RolesGuard: class RolesGuard {} }),
+  { virtual: true },
+);
+jest.mock(
+  'src/auth/decorators/roles/roles.decorator',
+  () => {
+    const { SetMetadata } = require('@nestjs/common');
+    const ROLES_KEY = 'roles';
+    const Roles = (...roles: any[]) => SetMetadata(ROLES_KEY, roles);
+    return { Roles, ROLES_KEY };
+  },
+  { virtual: true },
+);
+jest.mock(
   'src/auth/constant/auth-constant',
   () => ({ REQUEST_USER_KEY: 'user', AUTH_TYPE_kEY: 'authType' }),
   { virtual: true },

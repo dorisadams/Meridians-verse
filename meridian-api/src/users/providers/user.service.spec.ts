@@ -34,6 +34,8 @@ describe('UserService', () => {
     find: jest.Mock;
     findOneBy: jest.Mock;
     save: jest.Mock;
+    softDelete: jest.Mock;
+    restore: jest.Mock;
   };
   let createuserprovider: { createUsers: jest.Mock };
   let findOneByemail: { findOneByEmail: jest.Mock };
@@ -56,6 +58,8 @@ describe('UserService', () => {
       find: jest.fn(async () => [mockUser]),
       findOneBy: jest.fn(async () => mockUser),
       save: jest.fn(async (u) => u),
+      softDelete: jest.fn(),
+      restore: jest.fn(),
     };
     createuserprovider = { createUsers: jest.fn(async () => [mockUser]) };
     findOneByemail = { findOneByEmail: jest.fn(async () => mockUser) };
@@ -132,8 +136,30 @@ describe('UserService', () => {
     });
   });
 
-  it('deleteUser throws HttpException', async () => {
-    await expect(service.deleteUser()).rejects.toThrow(HttpException);
+  it('deleteUser soft-deletes the user and returns the deletion summary', async () => {
+    usersRepository.findOneBy.mockResolvedValue(mockUser);
+    const result = await service.deleteUser(1);
+    expect(usersRepository.softDelete).toHaveBeenCalledWith(1);
+    expect(result).toEqual({ deleted: true, id: 1 });
+  });
+
+  it('deleteUser throws HttpException when user is not found', async () => {
+    usersRepository.findOneBy.mockResolvedValue(null);
+    await expect(service.deleteUser(99)).rejects.toThrow(HttpException);
+  });
+
+  describe('restoreUser', () => {
+    it('restores a soft-deleted user and returns the restoration summary', async () => {
+      usersRepository.restore.mockResolvedValue({ affected: 1 });
+      const result = await service.restoreUser(1);
+      expect(usersRepository.restore).toHaveBeenCalledWith(1);
+      expect(result).toEqual({ restored: true, id: 1 });
+    });
+
+    it('throws HttpException when the user was not found or is not soft-deleted', async () => {
+      usersRepository.restore.mockResolvedValue({ affected: 0 });
+      await expect(service.restoreUser(404)).rejects.toThrow(HttpException);
+    });
   });
 
   it('createMany delegates to the createManyUserService', async () => {
